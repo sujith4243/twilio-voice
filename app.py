@@ -3,7 +3,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 
 app = Flask(__name__)
 
-# A simple keyword-response mapping
+# Simple keyword-response mapping
 KEYWORD_RESPONSES = {
     "hello": "Hi there! How can I help you today?",
     "time": "I am not able to tell time yet, but I hope you have a great day!",
@@ -17,7 +17,7 @@ def home():
 
 @app.route("/voice", methods=["POST"])
 def voice():
-    """Handle incoming call and prompt for speech"""
+    """Handle incoming or outgoing call and prompt for speech"""
     response = VoiceResponse()
 
     gather = Gather(
@@ -29,14 +29,12 @@ def voice():
     )
     gather.say("Hello! You are now connected to your AI assistant. Please ask me anything or say help.")
     response.append(gather)
-
-    # Repeat if no speech detected
     response.redirect("/voice")
     return str(response)
 
 @app.route("/process", methods=["POST"])
 def process():
-    """Process the user's speech and respond dynamically"""
+    """Process user's speech and respond dynamically"""
     response = VoiceResponse()
     user_speech = request.values.get("SpeechResult", "").lower().strip()
 
@@ -45,13 +43,11 @@ def process():
         response.redirect("/voice")
         return str(response)
 
-    # Check if user said 'bye' to end the call
     if "bye" in user_speech or "goodbye" in user_speech:
         response.say("Goodbye! Thanks for calling.")
         response.hangup()
         return str(response)
 
-    # Check for known keywords
     answered = False
     for keyword, reply in KEYWORD_RESPONSES.items():
         if keyword in user_speech:
@@ -60,9 +56,8 @@ def process():
             break
 
     if not answered:
-        # Default response for unknown input
         response.say("I'm not sure how to respond to that. Please try again or say help.")
-    
+
     # Ask for more input after responding
     gather = Gather(
         input="speech",
@@ -73,10 +68,10 @@ def process():
     )
     gather.say("What else would you like to do?")
     response.append(gather)
-
-    # If no speech, redirect back
     response.redirect("/voice")
     return str(response)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    # Use port=5000 for local, but on Render it uses $PORT
+    import os
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
